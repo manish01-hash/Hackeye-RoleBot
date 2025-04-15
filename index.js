@@ -21,9 +21,8 @@ const rolePriorities = [
   { name: 'Helper', prefix: 'H' },
   { name: 'Booster', prefix: 'B' },
   { name: 'VIP', prefix: 'Vip' },
-  { name: 'Guild Member', prefix: 'GM' } ,
+  { name: 'Guild Member', prefix: 'GM' },
   { name: 'Subscriber', prefix: 'Sub' },
-  
 ];
 
 // Function to get the highest priority role
@@ -35,9 +34,13 @@ function getHighestRole(memberRoles) {
 
 // Function to reset nickname when no priority role is found
 async function resetNickname(member) {
-  if (member.nickname !== null) {
-    await member.setNickname(null); // Reset nickname
-    console.log(`Reset ${member.user.tag}'s nickname.`);
+  try {
+    if (member.nickname !== null) {
+      await member.setNickname(null);
+      console.log(`✅ Reset ${member.user.username}'s nickname to default.`);
+    }
+  } catch (error) {
+    console.error(`❌ Failed to reset nickname for ${member.user.username}:`, error);
   }
 }
 
@@ -49,15 +52,14 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
   try {
     const memberRoles = newMember.roles.cache;
 
-    // Find the highest priority role the member has
-    const highestRole = getHighestRole(memberRoles);
-    
+    // Skip server owner
     if (newMember.id === newMember.guild.ownerId) {
-      console.log(`Skipping nickname update for server owner ${newMember.user.tag}`);
+      console.log(`⏩ Skipping owner: ${newMember.user.username}`);
       return;
     }
 
-    // If no priority role is found, reset nickname to original name
+    const highestRole = getHighestRole(memberRoles);
+    
     if (!highestRole) {
       await resetNickname(newMember);
       return;
@@ -65,25 +67,20 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
 
     const newNickname = `${highestRole.prefix} | ${newMember.user.username}`;
 
-    // Only update if nickname is different
     if (newMember.nickname !== newNickname) {
       await newMember.setNickname(newNickname);
-      console.log(`Updated ${newMember.user.tag}'s nickname to: ${newNickname}`);
+      console.log(`🔁 Updated ${newMember.user.username}'s nickname to: "${newNickname}"`);
     }
   } catch (error) {
-    console.error(`Error updating nickname: ${error}`);
+    console.error(`❌ Error in guildMemberUpdate:`, error);
   }
 });
 
-// Log when a user joins and set their nickname based on roles
 client.on('guildMemberAdd', async (member) => {
   try {
     const memberRoles = member.roles.cache;
-
-    // Find the highest priority role the member has
     const highestRole = getHighestRole(memberRoles);
 
-    // If no priority role is found, reset nickname to original name
     if (!highestRole) {
       await resetNickname(member);
       return;
@@ -91,13 +88,12 @@ client.on('guildMemberAdd', async (member) => {
 
     const newNickname = `${highestRole.prefix} | ${member.user.username}`;
 
-    // Only update if nickname is different
     if (member.nickname !== newNickname) {
       await member.setNickname(newNickname);
-      console.log(`Set ${member.user.tag}'s nickname to: ${newNickname}`);
+      console.log(`👋 Set new nickname for ${member.user.username}: "${newNickname}"`);
     }
   } catch (error) {
-    console.error(`Error setting nickname on member join: ${error}`);
+    console.error(`❌ Error in guildMemberAdd:`, error);
   }
 });
 
@@ -106,6 +102,5 @@ client.login(process.env.DISCORD_TOKEN);
 // Express server to keep bot online
 const express = require('express');
 const app = express();
-
-app.get('/', (req, res) => res.send('Bot is running.'));
-app.listen(3000, () => console.log('✅ Express server running on port 3000'));
+app.get('/', (req, res) => res.send('🤖 Bot is running.'));
+app.listen(3000, () => console.log('🌐 Express server running on port 3000'));
