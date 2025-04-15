@@ -14,15 +14,16 @@ const rolePriorities = [
   { name: 'Owner', prefix: 'O' },
   { name: 'Creators', prefix: 'C' },
   { name: 'Admin', prefix: 'A' },
+  { name: 'Developer', prefix: 'D' },
   { name: 'Head Mod', prefix: 'HM' },
   { name: 'Mod', prefix: 'M' },
   { name: 'Trial Mod', prefix: 'TM' },
-  { name: 'Developer', prefix: 'D' },
   { name: 'Helper', prefix: 'H' },
-  { name: 'VIP', prefix: 'Vip' },
   { name: 'Booster', prefix: 'B' },
+  { name: 'VIP', prefix: 'Vip' },
+  { name: 'Guild Member', prefix: 'GM' } ,
   { name: 'Subscriber', prefix: 'Sub' },
-  { name: 'Guild Member', prefix: 'GM' } // Guild Member is now above Subscriber
+  
 ];
 
 // Function to get the highest priority role
