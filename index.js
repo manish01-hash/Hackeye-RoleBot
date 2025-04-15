@@ -1,13 +1,17 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
+const timer = require('./timer.js'); // Make sure timer.js exists
 
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.MessageContent // Required for message commands
   ]
 });
+
 
 // Role priorities (from highest to lowest)
 const rolePriorities = [
@@ -48,6 +52,93 @@ client.once('ready', () => {
   console.log(`🤖 Bot is online as ${client.user.tag}`);
 });
 
+// Timer Commands
+client.on('messageCreate', async message => {
+  if (message.author.bot) return;
+  
+  // Timer Start Command
+  if (message.content.startsWith('!timer')) {
+    try {
+      const args = message.content.split(/ +/);
+      const minutes = parseInt(args[1]);
+
+      // Validate input
+      if (isNaN(minutes)) {
+        await message.reply('⏱️ Please specify time in minutes (e.g. `!timer 60`)');
+        return await message.react('❓');
+      }
+      
+      if (minutes < 1 || minutes > 240) {
+        await message.reply('⏳ Please choose between 1-240 minutes!');
+        return await message.react('⚠️');
+      }
+
+      // Check if user already has a timer
+      if (timer.hasTimer(message.author.id)) {
+        await message.reply(`⏰ You already have an active timer! Use \`!stoptimer\` to cancel it first.`);
+        return await message.react('⏳');
+      }
+
+      // Start timer with sound alert
+      await timer.startTimer(message.member, minutes, message.channel);
+      
+      // Visual confirmation
+      await message.reply({
+        content: `🔔 **Timer Started**\n⏳ Duration: ${minutes} minutes\nYou'll be notified when time's up!`,
+        allowedMentions: { repliedUser: false }
+      });
+      
+      await message.react('✅');
+      
+      // Optional: Send initial DM confirmation
+      try {
+        await message.author.send(`⏰ Timer started for ${minutes} minutes in ${message.guild.name}!`);
+      } catch (dmError) {
+        console.log(`Couldn't send DM to ${message.author.tag}`);
+      }
+      
+    } catch (error) {
+      console.error('Timer command error:', error);
+      await message.reply('❌ Failed to set timer. Please try again!');
+      await message.react('❗');
+    }
+  }
+
+  // Timer Cancel Command
+  if (message.content === '!stoptimer') {  // Removed extra parenthesis
+    try {
+      if (timer.hasTimer(message.author.id)) {
+        timer.clearTimer(message.author.id);
+        await message.reply('✅ Timer cancelled successfully!');
+        await message.react('🛑');
+      } else {
+        await message.reply("⏳ You don't have any active timers to cancel!");
+        await message.react('❌');
+      }
+    } catch (error) {
+      console.error('Timer cancellation error:', error);
+      await message.reply('❌ Failed to cancel timer. Please try again!');
+      await message.react('❗');
+    }
+  }
+
+  // Timer Status Command (New)
+  if (message.content === '!timerstatus') {  // Removed extra parenthesis
+    try {
+      if (timer.hasTimer(message.author.id)) {
+        await message.reply('⏰ You have an active timer running!');
+        await message.react('🔔');
+      } else {
+        await message.reply("🛑 No active timers found. Use `!timer` to start one!");
+        await message.react('⏳');
+      }
+    } catch (error) {
+      console.error('Timer status error:', error);
+      await message.react('❗');
+    }
+  }
+});
+// Nickname Management
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
   try {
     const memberRoles = newMember.roles.cache;
@@ -100,7 +191,6 @@ client.on('guildMemberAdd', async (member) => {
 client.login(process.env.DISCORD_TOKEN);
 
 // Express server to keep bot online
-const express = require('express');
 const app = express();
 app.get('/', (req, res) => res.send('🤖 Bot is running.'));
 app.listen(3000, () => console.log('🌐 Express server running on port 3000'));
