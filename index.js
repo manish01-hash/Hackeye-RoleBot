@@ -31,25 +31,50 @@ client.once('ready', () => {
 
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
   try {
+    // Check if bot has permission to manage nicknames
+    if (!newMember.guild.me.permissions.has('MANAGE_NICKNAMES')) {
+      console.error('Bot lacks MANAGE_NICKNAMES permission');
+      return;
+    }
+
     const memberRoles = newMember.roles.cache;
     
-    // Find the highest priority role the member has
-      const highestRole = rolePriorities.find(role =>
-          memberRoles.some(r => r.name === role.name)
-      );
-    if (!highestRole) return; // No priority roles found
+    // Debug: Log all roles for verification
+    console.log(`${newMember.user.tag}'s roles:`, [...memberRoles.values()].map(r => r.name));
+
+    // Find all priority roles the member has
+    const memberPriorityRoles = rolePriorities.filter(role => 
+      memberRoles.some(r => r.name === role.name)
+    ).sort((a, b) => 
+      rolePriorities.findIndex(r => r.name === a.name) - 
+      rolePriorities.findIndex(r => r.name === b.name)
+    );
+    
+    if (memberPriorityRoles.length === 0) return;
+
+    // Get the highest priority role
+    const highestRole = memberPriorityRoles[0];
     
     const newNickname = `${highestRole.prefix} | ${newMember.user.username}`;
     
     // Only update if nickname is different
     if (newMember.nickname !== newNickname) {
-      await newMember.setNickname(newNickname);
-      console.log(`Updated ${newMember.user.tag}'s nickname to: ${newNickname}`);
+      await newMember.setNickname(newNickname)
+        .then(() => console.log(`Successfully updated ${newMember.user.tag}`))
+        .catch(err => {
+          if (err.code === 50013) {
+            console.error(`Missing permissions to change ${newMember.user.tag}'s nickname`);
+            // This usually means the bot's role needs to be higher
+          } else {
+            console.error(`Error updating ${newMember.user.tag}:`, err);
+          }
+        });
     }
   } catch (error) {
-    console.error(`Error updating nickname: ${error}`);
+    console.error(`Unexpected error:`, error);
   }
 });
+
 
 client.login(process.env.DISCORD_TOKEN);
 
