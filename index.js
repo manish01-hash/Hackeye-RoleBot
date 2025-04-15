@@ -22,8 +22,23 @@ const rolePriorities = [
   { name: 'VIP', prefix: 'Vip' },
   { name: 'Booster', prefix: 'B' },
   { name: 'Subscriber', prefix: 'Sub' },
-  { name: 'Guild Member', prefix: 'GM' }
+  { name: 'Guild Member', prefix: 'GM' } // Guild Member is now above Subscriber
 ];
+
+// Function to get the highest priority role
+function getHighestRole(memberRoles) {
+  return rolePriorities.find(role =>
+    memberRoles.some(r => r.name === role.name)
+  );
+}
+
+// Function to reset nickname when no priority role is found
+async function resetNickname(member) {
+  if (member.nickname !== null) {
+    await member.setNickname(null); // Reset nickname
+    console.log(`Reset ${member.user.tag}'s nickname.`);
+  }
+}
 
 client.once('ready', () => {
   console.log(`🤖 Bot is online as ${client.user.tag}`);
@@ -31,53 +46,58 @@ client.once('ready', () => {
 
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
   try {
-    // Check if bot has permission to manage nicknames
-    if (!newMember.guild.me.permissions.has('MANAGE_NICKNAMES')) {
-      console.error('Bot lacks MANAGE_NICKNAMES permission');
+    const memberRoles = newMember.roles.cache;
+
+    // Find the highest priority role the member has
+    const highestRole = getHighestRole(memberRoles);
+
+    // If no priority role is found, reset nickname to original name
+    if (!highestRole) {
+      await resetNickname(newMember);
       return;
     }
 
-    const memberRoles = newMember.roles.cache;
-    
-    // Debug: Log all roles for verification
-    console.log(`${newMember.user.tag}'s roles:`, [...memberRoles.values()].map(r => r.name));
-
-    // Find all priority roles the member has
-    const memberPriorityRoles = rolePriorities.filter(role => 
-      memberRoles.some(r => r.name === role.name)
-    ).sort((a, b) => 
-      rolePriorities.findIndex(r => r.name === a.name) - 
-      rolePriorities.findIndex(r => r.name === b.name)
-    );
-    
-    if (memberPriorityRoles.length === 0) return;
-
-    // Get the highest priority role
-    const highestRole = memberPriorityRoles[0];
-    
     const newNickname = `${highestRole.prefix} | ${newMember.user.username}`;
-    
+
     // Only update if nickname is different
     if (newMember.nickname !== newNickname) {
-      await newMember.setNickname(newNickname)
-        .then(() => console.log(`Successfully updated ${newMember.user.tag}`))
-        .catch(err => {
-          if (err.code === 50013) {
-            console.error(`Missing permissions to change ${newMember.user.tag}'s nickname`);
-            // This usually means the bot's role needs to be higher
-          } else {
-            console.error(`Error updating ${newMember.user.tag}:`, err);
-          }
-        });
+      await newMember.setNickname(newNickname);
+      console.log(`Updated ${newMember.user.tag}'s nickname to: ${newNickname}`);
     }
   } catch (error) {
-    console.error(`Unexpected error:`, error);
+    console.error(`Error updating nickname: ${error}`);
   }
 });
 
+// Log when a user joins and set their nickname based on roles
+client.on('guildMemberAdd', async (member) => {
+  try {
+    const memberRoles = member.roles.cache;
+
+    // Find the highest priority role the member has
+    const highestRole = getHighestRole(memberRoles);
+
+    // If no priority role is found, reset nickname to original name
+    if (!highestRole) {
+      await resetNickname(member);
+      return;
+    }
+
+    const newNickname = `${highestRole.prefix} | ${member.user.username}`;
+
+    // Only update if nickname is different
+    if (member.nickname !== newNickname) {
+      await member.setNickname(newNickname);
+      console.log(`Set ${member.user.tag}'s nickname to: ${newNickname}`);
+    }
+  } catch (error) {
+    console.error(`Error setting nickname on member join: ${error}`);
+  }
+});
 
 client.login(process.env.DISCORD_TOKEN);
 
+// Express server to keep bot online
 const express = require('express');
 const app = express();
 
