@@ -51,6 +51,11 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
 
     // Find the highest priority role the member has
     const highestRole = getHighestRole(memberRoles);
+    
+    if (newMember.id === newMember.guild.ownerId) {
+      console.log(`Skipping nickname update for server owner ${newMember.user.tag}`);
+      return;
+    }
 
     // If no priority role is found, reset nickname to original name
     if (!highestRole) {
