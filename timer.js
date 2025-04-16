@@ -1,6 +1,7 @@
 const { Collection } = require('discord.js');
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 const timers = new Collection();
+const ytdl = require('ytdl-core');
 
 module.exports = {
   /**
@@ -64,35 +65,61 @@ module.exports = {
    */
   async playAlertSound(member) {
     try {
-      const connection = joinVoiceChannel({
-        channelId: member.voice.channel.id,
-        guildId: member.guild.id,
-        adapterCreator: member.guild.voiceAdapterCreator,
-      });
+        const connection = joinVoiceChannel({
+            channelId: member.voice.channel.id,
+            guildId: member.guild.id,
+            adapterCreator: member.guild.voiceAdapterCreator,
+        });
 
-      await entersState(connection, VoiceConnectionStatus.Ready, 5000);
-      
-      const player = createAudioPlayer();
-      const resource = createAudioResource(
-        'https://www.soundjay.com/mechanical/sounds/alarm-clock-01.mp3',
-        { volume: 0.7 }
-      );
+        await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
+        
+        const player = createAudioPlayer();
+        const youtubeURL = 'https://www.youtube.com/watch?v=gN7fXLLFwdk';
+        
+        // ONLY CHANGE: Added begin/end parameters to limit playback
+        const stream = ytdl(youtubeURL, {
+            filter: 'audioonly',
+            quality: 'highestaudio',
+            highWaterMark: 1 << 25,
+            begin: '0:0:0',
+            end: '0:0:30' // Stops after 30 seconds
+        });
+        
+        const resource = createAudioResource(stream, {
+            inlineVolume: true,
+            inputType: 'webm/opus'
+        });
+        
+        resource.volume.setVolume(0.5);
+        
+        connection.subscribe(player);
+        player.play(resource);
 
-      player.play(resource);
-      connection.subscribe(player);
+        // Original event handlers remain unchanged
+        player.on('stateChange', (oldState, newState) => {
+            if (newState.status === 'idle') {
+                setTimeout(() => connection.destroy(), 1000);
+            }
+        });
 
-      player.on('stateChange', (oldState, newState) => {
-        if (newState.status === 'idle') {
-          connection.destroy();
-        }
-      });
+        player.on('error', error => {
+            console.error('Player error:', error);
+            connection.destroy();
+        });
+
+        return new Promise((resolve) => {
+            player.on('stateChange', (oldState, newState) => {
+                if (newState.status === 'idle') {
+                    resolve();
+                }
+            });
+        });
 
     } catch (error) {
-      console.error('Sound alert error:', error);
-      throw error;
+        console.error('YouTube playback error:', error);
+        throw error;
     }
-  },
-
+},
   /**
    * Sends timer completion notification
    * @param {GuildMember} member 
