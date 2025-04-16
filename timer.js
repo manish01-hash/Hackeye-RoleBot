@@ -78,36 +78,27 @@ module.exports = {
       await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
       const player = createAudioPlayer();
   
-      // Create a simple sine wave using a proper PCM format
-      const sampleRate = 48000; // 48kHz
-      const duration = 3; // seconds
-      const frequency = 440; // A4 note frequency
-      const numSamples = sampleRate * duration;
-      const buffer = Buffer.alloc(numSamples * 2); // 16-bit PCM (2 bytes per sample)
+      // Play the specific YouTube audio
+      const stream = ytdl('https://www.youtube.com/watch?v=rUkzZTGE6jI', {
+        filter: 'audioonly',
+        quality: 'highestaudio',
+        highWaterMark: 1 << 25
+      });
   
-      // Fill buffer with sine wave data
-      for (let i = 0; i < numSamples; i++) {
-        const sample = Math.sin(2 * Math.PI * frequency * i / sampleRate);
-        const value = sample * 32767; // 16-bit signed PCM range
-        buffer.writeInt16LE(value, i * 2);
-      }
-  
-      const resource = createAudioResource(buffer, {
-        inputType: 'pcm', // Specify PCM format
-        channels: 1, // Mono
-        sampleRate: sampleRate,
+      const resource = createAudioResource(stream, {
         inlineVolume: true
       });
-      resource.volume.setVolume(0.3);
+      resource.volume.setVolume(0.5); // Adjust volume as needed (0.0 to 1.0)
   
       connection.subscribe(player);
       player.play(resource);
   
-      // Auto-stop after 3 seconds
-      setTimeout(() => {
-        player.stop();
-        connection.destroy();
-      }, 3000);
+      // Auto-disconnect after the audio finishes playing
+      player.on('stateChange', (oldState, newState) => {
+        if (newState.status === 'idle') {
+          connection.destroy();
+        }
+      });
   
     } catch (error) {
       console.error('Audio error:', error);
