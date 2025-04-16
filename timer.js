@@ -66,45 +66,44 @@ module.exports = {
   
 
   async playAlertSound(member) {
+    if (!member.voice.channel) return;
+
+    const connection = joinVoiceChannel({
+        channelId: member.voice.channel.id,
+        guildId: member.guild.id,
+        adapterCreator: member.guild.voiceAdapterCreator,
+    });
+
     try {
-        if (!member.voice.channel) return;
-
-        const connection = joinVoiceChannel({
-            channelId: member.voice.channel.id,
-            guildId: member.guild.id,
-            adapterCreator: member.guild.voiceAdapterCreator,
-        });
-
         await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
+        const player = createAudioPlayer();
 
-        // Play soundboard sound (client must have permission)
-        await member.voice.channel.sendSoundboardSound('airhorn');
+        // Generate a beep sound programmatically (no external files)
+        const sineWave = Buffer.alloc(1024);
+        for (let i = 0; i < 1024; i++) {
+            sineWave[i] = Math.floor(Math.sin(i / 10) * 50 + 128);
+        }
 
-        // Clean up after delay
+        const resource = createAudioResource(sineWave, {
+            inputType: 'arbitrary',
+            inlineVolume: true
+        });
+        resource.volume.setVolume(0.3); // Lower volume for beeps
+
+        connection.subscribe(player);
+        player.play(resource);
+
+        // Auto-stop after 3 seconds
         setTimeout(() => {
-            if (connection.state.status !== VoiceConnectionStatus.Destroyed) {
-                connection.destroy();
-            }
-        }, 3000); // 3 second delay before disconnecting
+            player.stop();
+            connection.destroy();
+        }, 3000);
 
     } catch (error) {
-        console.error('Soundboard error:', error);
-        // Fallback to simple beep if soundboard fails
-        try {
-            const fallbackUrl = 'https://www.soundjay.com/buttons/sounds/beep-01a.mp3';
-            const player = createAudioPlayer();
-            const resource = createAudioResource(fallbackUrl, {
-                inlineVolume: true
-            });
-            resource.volume.setVolume(0.3);
-            connection.subscribe(player);
-            player.play(resource);
-        } catch (fallbackError) {
-            console.error('Fallback sound failed:', fallbackError);
-        }
+        console.error('Audio error:', error);
+        connection.destroy();
     }
 },
-
   /**
    * Sends timer completion notification
    * @param {GuildMember} member 
