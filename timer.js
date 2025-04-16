@@ -63,6 +63,8 @@ module.exports = {
    * Plays alert sound in user's voice channel
    * @param {GuildMember} member 
    */
+  
+
   async playAlertSound(member) {
     try {
         const connection = joinVoiceChannel({
@@ -76,35 +78,45 @@ module.exports = {
         const player = createAudioPlayer();
         const youtubeURL = 'https://www.youtube.com/watch?v=gN7fXLLFwdk';
         
-        // ONLY CHANGE: Added begin/end parameters to limit playback
+        // Get audio stream with quality options
         const stream = ytdl(youtubeURL, {
             filter: 'audioonly',
             quality: 'highestaudio',
-            highWaterMark: 1 << 25,
-            begin: '0:0:0',
-            end: '0:0:30' // Stops after 30 seconds
+            highWaterMark: 1 << 25 // 32MB buffer
         });
         
+        // Add error handler for the stream
+        stream.on('error', error => {
+            console.error('Stream error:', error);
+            if (connection.state.status !== VoiceConnectionStatus.Destroyed) {
+                connection.destroy();
+            }
+        });
+
         const resource = createAudioResource(stream, {
             inlineVolume: true,
             inputType: 'webm/opus'
         });
         
-        resource.volume.setVolume(0.5);
+        resource.volume.setVolume(0.5); // 50% volume
         
         connection.subscribe(player);
         player.play(resource);
 
-        // Original event handlers remain unchanged
+        // Handle playback events
         player.on('stateChange', (oldState, newState) => {
             if (newState.status === 'idle') {
-                setTimeout(() => connection.destroy(), 1000);
+                if (connection.state.status !== VoiceConnectionStatus.Destroyed) {
+                    connection.destroy();
+                }
             }
         });
 
         player.on('error', error => {
             console.error('Player error:', error);
-            connection.destroy();
+            if (connection.state.status !== VoiceConnectionStatus.Destroyed) {
+                connection.destroy();
+            }
         });
 
         return new Promise((resolve) => {
@@ -119,7 +131,7 @@ module.exports = {
         console.error('YouTube playback error:', error);
         throw error;
     }
-},
+  },
   /**
    * Sends timer completion notification
    * @param {GuildMember} member 
