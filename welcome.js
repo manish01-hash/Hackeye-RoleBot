@@ -1,10 +1,10 @@
 const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const { generateWelcomeCard } = require('./welcomeGenerator');
-const config = require('config.json');
+const welcomeChannelId = process.env.WELCOME_CHANNEL_ID;
 
 module.exports = async (member) => {
     try {
-        const welcomeChannel = member.guild.channels.cache.get(config.welcomeChannelId);
+        const welcomeChannel = member.guild.channels.cache.get(process.env.WELCOME_CHANNEL_ID);
         if (!welcomeChannel) return;
 
         // Generate ultra HD welcome card with animations

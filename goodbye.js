@@ -1,10 +1,10 @@
 const { EmbedBuilder, AttachmentBuilder } = require('discord.js');
 const { generateGoodbyeCard } = require('./goodbyeGenerator');
-const config = require('../../config.json');
+const goodbyeChannelId = process.env.GOODBYE_CHANNEL_ID;
 
 module.exports = async (member) => {
     try {
-        const goodbyeChannel = member.guild.channels.cache.get(config.goodbyeChannelId);
+        const goodbyeChannel = member.guild.channels.cache.get(process.env.GOODBYE_CHANNEL_ID);
         if (!goodbyeChannel) return;
 
         // Generate cinematic goodbye card
