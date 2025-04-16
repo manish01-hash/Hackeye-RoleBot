@@ -3,9 +3,8 @@ const path = require('path');
 
 
 // Register fancy fonts
-registerFont(path.join(__dirname, './fonts/Pacifico.ttf'), { family: 'Pacifico' });
-registerFont(path.join(__dirname, './fonts/Montserrat-Bold.ttf'), { family: 'Montserrat' });
-
+registerFont(path.join(__dirname, 'fonts', 'Pacifico.ttf'), { family: 'Pacifico' });
+registerFont(path.join(__dirname, 'fonts', 'Montserrat-Bold.ttf'), { family: 'Montserrat' });
 module.exports.generateWelcomeCard = async (member) => {
     const canvas = createCanvas(1200, 600);
     const ctx = canvas.getContext('2d');
