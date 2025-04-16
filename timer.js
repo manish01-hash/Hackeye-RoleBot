@@ -67,43 +67,53 @@ module.exports = {
 
   async playAlertSound(member) {
     if (!member.voice.channel) return;
-
+  
     const connection = joinVoiceChannel({
-        channelId: member.voice.channel.id,
-        guildId: member.guild.id,
-        adapterCreator: member.guild.voiceAdapterCreator,
+      channelId: member.voice.channel.id,
+      guildId: member.guild.id,
+      adapterCreator: member.guild.voiceAdapterCreator,
     });
-
+  
     try {
-        await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
-        const player = createAudioPlayer();
-
-        // Generate a beep sound programmatically (no external files)
-        const sineWave = Buffer.alloc(1024);
-        for (let i = 0; i < 1024; i++) {
-            sineWave[i] = Math.floor(Math.sin(i / 10) * 50 + 128);
-        }
-
-        const resource = createAudioResource(sineWave, {
-            inputType: 'arbitrary',
-            inlineVolume: true
-        });
-        resource.volume.setVolume(0.3); // Lower volume for beeps
-
-        connection.subscribe(player);
-        player.play(resource);
-
-        // Auto-stop after 3 seconds
-        setTimeout(() => {
-            player.stop();
-            connection.destroy();
-        }, 3000);
-
-    } catch (error) {
-        console.error('Audio error:', error);
+      await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
+      const player = createAudioPlayer();
+  
+      // Create a simple sine wave using a proper PCM format
+      const sampleRate = 48000; // 48kHz
+      const duration = 3; // seconds
+      const frequency = 440; // A4 note frequency
+      const numSamples = sampleRate * duration;
+      const buffer = Buffer.alloc(numSamples * 2); // 16-bit PCM (2 bytes per sample)
+  
+      // Fill buffer with sine wave data
+      for (let i = 0; i < numSamples; i++) {
+        const sample = Math.sin(2 * Math.PI * frequency * i / sampleRate);
+        const value = sample * 32767; // 16-bit signed PCM range
+        buffer.writeInt16LE(value, i * 2);
+      }
+  
+      const resource = createAudioResource(buffer, {
+        inputType: 'pcm', // Specify PCM format
+        channels: 1, // Mono
+        sampleRate: sampleRate,
+        inlineVolume: true
+      });
+      resource.volume.setVolume(0.3);
+  
+      connection.subscribe(player);
+      player.play(resource);
+  
+      // Auto-stop after 3 seconds
+      setTimeout(() => {
+        player.stop();
         connection.destroy();
+      }, 3000);
+  
+    } catch (error) {
+      console.error('Audio error:', error);
+      connection.destroy();
     }
-},
+  },
   /**
    * Sends timer completion notification
    * @param {GuildMember} member 
