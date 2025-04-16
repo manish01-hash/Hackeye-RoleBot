@@ -1,10 +1,10 @@
 const { createCanvas, loadImage, registerFont } = require('canvas');
 const path = require('path');
-const config = require('../../config.json');
+
 
 // Register fancy fonts
-registerFont(path.join(__dirname, '../../assets/fonts/Pacifico.ttf'), { family: 'Pacifico' });
-registerFont(path.join(__dirname, '../../assets/fonts/Montserrat-Bold.ttf'), { family: 'Montserrat' });
+registerFont(path.join(__dirname, './fonts/Pacifico.ttf'), { family: 'Pacifico' });
+registerFont(path.join(__dirname, './fonts/Montserrat-Bold.ttf'), { family: 'Montserrat' });
 
 module.exports.generateWelcomeCard = async (member) => {
     const canvas = createCanvas(1200, 600);
