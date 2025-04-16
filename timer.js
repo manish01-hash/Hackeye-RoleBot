@@ -67,6 +67,8 @@ module.exports = {
 
   async playAlertSound(member) {
     try {
+        if (!member.voice.channel) return;
+
         const connection = joinVoiceChannel({
             channelId: member.voice.channel.id,
             guildId: member.guild.id,
@@ -74,64 +76,35 @@ module.exports = {
         });
 
         await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
-        
-        const player = createAudioPlayer();
-        const youtubeURL = 'https://www.youtube.com/watch?v=gN7fXLLFwdk';
-        
-        // Get audio stream with quality options
-        const stream = ytdl(youtubeURL, {
-            filter: 'audioonly',
-            quality: 'highestaudio',
-            highWaterMark: 1 << 25 // 32MB buffer
-        });
-        
-        // Add error handler for the stream
-        stream.on('error', error => {
-            console.error('Stream error:', error);
+
+        // Play soundboard sound (client must have permission)
+        await member.voice.channel.sendSoundboardSound('airhorn');
+
+        // Clean up after delay
+        setTimeout(() => {
             if (connection.state.status !== VoiceConnectionStatus.Destroyed) {
                 connection.destroy();
             }
-        });
-
-        const resource = createAudioResource(stream, {
-            inlineVolume: true,
-            inputType: 'webm/opus'
-        });
-        
-        resource.volume.setVolume(0.5); // 50% volume
-        
-        connection.subscribe(player);
-        player.play(resource);
-
-        // Handle playback events
-        player.on('stateChange', (oldState, newState) => {
-            if (newState.status === 'idle') {
-                if (connection.state.status !== VoiceConnectionStatus.Destroyed) {
-                    connection.destroy();
-                }
-            }
-        });
-
-        player.on('error', error => {
-            console.error('Player error:', error);
-            if (connection.state.status !== VoiceConnectionStatus.Destroyed) {
-                connection.destroy();
-            }
-        });
-
-        return new Promise((resolve) => {
-            player.on('stateChange', (oldState, newState) => {
-                if (newState.status === 'idle') {
-                    resolve();
-                }
-            });
-        });
+        }, 3000); // 3 second delay before disconnecting
 
     } catch (error) {
-        console.error('YouTube playback error:', error);
-        throw error;
+        console.error('Soundboard error:', error);
+        // Fallback to simple beep if soundboard fails
+        try {
+            const fallbackUrl = 'https://www.soundjay.com/buttons/sounds/beep-01a.mp3';
+            const player = createAudioPlayer();
+            const resource = createAudioResource(fallbackUrl, {
+                inlineVolume: true
+            });
+            resource.volume.setVolume(0.3);
+            connection.subscribe(player);
+            player.play(resource);
+        } catch (fallbackError) {
+            console.error('Fallback sound failed:', fallbackError);
+        }
     }
-  },
+},
+
   /**
    * Sends timer completion notification
    * @param {GuildMember} member 
