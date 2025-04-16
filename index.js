@@ -56,10 +56,13 @@ client.once('ready', () => {
 
 // Welcome Event
 client.on('guildMemberAdd', async (member) => {
+  console.log(`👤 New member joined: ${member.user.username}`);
+  console.log(`🔍 Trying to send welcome message to: ${process.env.WELCOME_CHANNEL_ID}`);
   try {
     // Welcome card feature
     await welcomeEvent(member);
-    
+    console.log(`👤 New member joined: ${member.user.username}`);
+    console.log(`🔍 Trying to send welcome message to: ${process.env.WELCOME_CHANNEL_ID}`);
     // Nickname management
     const memberRoles = member.roles.cache;
     const highestRole = getHighestRole(memberRoles);
@@ -82,7 +85,11 @@ client.on('guildMemberAdd', async (member) => {
 
 // Goodbye Event
 client.on('guildMemberRemove', async (member) => {
+  console.log(`👤 Member left: ${member.user.username}`);
+  console.log(`🔍 Trying to send goodbye message to: ${process.env.GOODBYE_CHANNEL_ID}`);
   try {
+    console.log(`👤 Member left: ${member.user.username}`);
+    console.log(`🔍 Trying to send goodbye message to: ${process.env.GOODBYE_CHANNEL_ID}`);
     await goodbyeEvent(member);
   } catch (error) {
     console.error('Error in goodbye event:', error);
@@ -211,3 +218,5 @@ client.login(process.env.DISCORD_TOKEN);
 const app = express();
 app.get('/', (req, res) => res.send('🤖 Bot is running.'));
 app.listen(3000, () => console.log('🌐 Express server running on port 3000'));
+console.log("WELCOME_CHANNEL_ID:", process.env.WELCOME_CHANNEL_ID);
+console.log("GOODBYE_CHANNEL_ID:", process.env.GOODBYE_CHANNEL_ID);

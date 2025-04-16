@@ -5,7 +5,11 @@ const welcomeChannelId = process.env.WELCOME_CHANNEL_ID;
 module.exports = async (member) => {
     try {
         const welcomeChannel = member.guild.channels.cache.get(process.env.WELCOME_CHANNEL_ID);
-        if (!welcomeChannel) return;
+        console.log("📢 Welcome channel object:", welcomeChannel);
+        if (!welcomeChannel) {
+            console.log("❌ Welcome channel not found!");
+            return;
+          }
 
         // Generate ultra HD welcome card with animations
         const welcomeAttachment = await generateWelcomeCard(member);
