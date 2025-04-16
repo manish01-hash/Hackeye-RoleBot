@@ -1,8 +1,9 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
-const timer = require('./timer.js'); // Make sure timer.js exists
+const timer = require('./timer.js');
 const express = require('express');
-
+const welcomeEvent = require('./welcome.js'); // Fixed path
+const goodbyeEvent = require('./goodbye.js'); // Fixed path
 
 const client = new Client({
   intents: [
@@ -10,10 +11,9 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.MessageContent 
+    GatewayIntentBits.MessageContent,
   ]
 });
-
 
 // Role priorities (from highest to lowest)
 const rolePriorities = [
@@ -52,6 +52,41 @@ async function resetNickname(member) {
 
 client.once('ready', () => {
   console.log(`🤖 Bot is online as ${client.user.tag}`);
+});
+
+// Welcome Event
+client.on('guildMemberAdd', async (member) => {
+  try {
+    // Welcome card feature
+    await welcomeEvent(member);
+    
+    // Nickname management
+    const memberRoles = member.roles.cache;
+    const highestRole = getHighestRole(memberRoles);
+
+    if (!highestRole) {
+      await resetNickname(member);
+      return;
+    }
+
+    const newNickname = `${highestRole.prefix} | ${member.user.username}`;
+
+    if (member.nickname !== newNickname) {
+      await member.setNickname(newNickname);
+      console.log(`👋 Set new nickname for ${member.user.username}: "${newNickname}"`);
+    }
+  } catch (error) {
+    console.error(`❌ Error in guildMemberAdd:`, error);
+  }
+});
+
+// Goodbye Event
+client.on('guildMemberRemove', async (member) => {
+  try {
+    await goodbyeEvent(member);
+  } catch (error) {
+    console.error('Error in goodbye event:', error);
+  }
 });
 
 // Timer Commands
@@ -107,7 +142,7 @@ client.on('messageCreate', async message => {
   }
 
   // Timer Cancel Command
-  if (message.content === '!stoptimer') {  // Removed extra parenthesis
+  if (message.content === '!stoptimer') {
     try {
       if (timer.hasTimer(message.author.id)) {
         timer.clearTimer(message.author.id);
@@ -124,8 +159,8 @@ client.on('messageCreate', async message => {
     }
   }
 
-  // Timer Status Command (New)
-  if (message.content === '!timerstatus') {  // Removed extra parenthesis
+  // Timer Status Command
+  if (message.content === '!timerstatus') {
     try {
       if (timer.hasTimer(message.author.id)) {
         await message.reply('⏰ You have an active timer running!');
@@ -140,6 +175,7 @@ client.on('messageCreate', async message => {
     }
   }
 });
+
 // Nickname Management
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
   try {
@@ -166,27 +202,6 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
     }
   } catch (error) {
     console.error(`❌ Error in guildMemberUpdate:`, error);
-  }
-});
-
-client.on('guildMemberAdd', async (member) => {
-  try {
-    const memberRoles = member.roles.cache;
-    const highestRole = getHighestRole(memberRoles);
-
-    if (!highestRole) {
-      await resetNickname(member);
-      return;
-    }
-
-    const newNickname = `${highestRole.prefix} | ${member.user.username}`;
-
-    if (member.nickname !== newNickname) {
-      await member.setNickname(newNickname);
-      console.log(`👋 Set new nickname for ${member.user.username}: "${newNickname}"`);
-    }
-  } catch (error) {
-    console.error(`❌ Error in guildMemberAdd:`, error);
   }
 });
 
