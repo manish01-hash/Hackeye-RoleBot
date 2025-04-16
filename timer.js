@@ -1,11 +1,9 @@
 const { Collection } = require('discord.js');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, entersState, VoiceConnectionStatus } = require('@discordjs/voice');
 const timers = new Collection();
-const ytdl = require('ytdl-core');
 
 module.exports = {
   /**
-   * Starts a timer with sound alert and notifications
+   * Starts a timer with notifications
    * @param {GuildMember} member - Discord member
    * @param {number} minutes - Duration in minutes
    * @param {TextChannel} channel - Channel to send notifications
@@ -28,11 +26,6 @@ module.exports = {
           // Send DM notification
           await this.notifyUser(member, minutes);
           
-          // Play sound if in voice channel
-          if (member.voice.channel) {
-            await this.playAlertSound(member);
-          }
-
           // Send channel notification
           await channel.send(`${member}, your ${minutes}-minute timer has ended!`);
           
@@ -59,52 +52,6 @@ module.exports = {
     }
   },
 
-  /**
-   * Plays alert sound in user's voice channel
-   * @param {GuildMember} member 
-   */
-  
-
-  async playAlertSound(member) {
-    if (!member.voice.channel) return;
-  
-    const connection = joinVoiceChannel({
-      channelId: member.voice.channel.id,
-      guildId: member.guild.id,
-      adapterCreator: member.guild.voiceAdapterCreator,
-    });
-  
-    try {
-      await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
-      const player = createAudioPlayer();
-  
-      // Play the specific YouTube audio
-      const stream = ytdl('https://www.youtube.com/watch?v=rUkzZTGE6jI', {
-        filter: 'audioonly',
-        quality: 'highestaudio',
-        highWaterMark: 1 << 25
-      });
-  
-      const resource = createAudioResource(stream, {
-        inlineVolume: true
-      });
-      resource.volume.setVolume(0.5); // Adjust volume as needed (0.0 to 1.0)
-  
-      connection.subscribe(player);
-      player.play(resource);
-  
-      // Auto-disconnect after the audio finishes playing
-      player.on('stateChange', (oldState, newState) => {
-        if (newState.status === 'idle') {
-          connection.destroy();
-        }
-      });
-  
-    } catch (error) {
-      console.error('Audio error:', error);
-      connection.destroy();
-    }
-  },
   /**
    * Sends timer completion notification
    * @param {GuildMember} member 
