@@ -1,6 +1,6 @@
 const { createCanvas, loadImage, registerFont } = require('canvas');
 const path = require('path');
-
+const { AttachmentBuilder } = require('discord.js');
 
 // Register fancy fonts
 registerFont(path.join(__dirname, 'fonts', 'Pacifico.ttf'), { family: 'Pacifico' });

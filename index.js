@@ -17,18 +17,25 @@ const client = new Client({
 
 // Role priorities (from highest to lowest)
 const rolePriorities = [
-  { name: 'Owner', prefix: 'O' },
-  { name: 'Creators', prefix: 'C' },
-  { name: 'Admin', prefix: 'A' },
-  { name: 'Developer', prefix: 'D' },
-  { name: 'Head Mod', prefix: 'HM' },
-  { name: 'Mod', prefix: 'M' },
-  { name: 'Trial Mod', prefix: 'TM' },
-  { name: 'Helper', prefix: 'H' },
-  { name: 'Booster', prefix: 'B' },
-  { name: 'VIP', prefix: 'Vip' },
-  { name: 'Guild Member', prefix: 'GM' },
-  { name: 'Subscriber', prefix: 'Sub' },
+  { name: '👑 | Server Owner', prefix: 'O' },
+  { name: '💠 | Co-Owner', prefix: 'CO' },
+  { name: '🔧 | Server Developer', prefix: 'DEV' },
+  { name: '⚙️ | Admin', prefix: 'ADMIN' },
+  { name: '🔥 | Moderator', prefix: 'M' },
+  { name: '🎀 | Girl Moderator', prefix: 'GM' },
+  { name: '🎙️ | VC Moderator', prefix: 'VM' },
+  { name: '💬 | Chat Moderator', prefix: 'CM' },
+  { name: '🛠️ | Event Manager', prefix: 'EM' },
+  { name: '🛡️ | Trial Mod', prefix: 'TM' },
+  { name: '🎥 | YouTuber', prefix: 'YT' },
+  { name: '🌟 | Booster', prefix: 'B' },
+  { name: '📢 | Announcer', prefix: 'AN' },
+  { name: '💎 | VIP Member', prefix: 'VIP' },
+  { name: '🧡 | Trusted', prefix: 'T' },
+  { name: '🌸 | Angel Aura', prefix: 'Angel' },
+  { name: '📺 | Subscriber', prefix: 'SUB' },
+
+
 ];
 
 // Function to get the highest priority role

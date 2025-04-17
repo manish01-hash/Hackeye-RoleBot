@@ -1,6 +1,6 @@
 const { createCanvas, loadImage } = require('canvas');
 const path = require('path');
-
+const { AttachmentBuilder } = require('discord.js');
 module.exports.generateGoodbyeCard = async (member) => {
     const canvas = createCanvas(1200, 400);
     const ctx = canvas.getContext('2d');
