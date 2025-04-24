@@ -2,8 +2,6 @@ const { Client, GatewayIntentBits } = require('discord.js');
 require('dotenv').config();
 const timer = require('./timer.js');
 const express = require('express');
-const welcomeEvent = require('./welcome.js'); // Fixed path
-const goodbyeEvent = require('./goodbye.js'); // Fixed path
 
 const client = new Client({
   intents: [
@@ -34,8 +32,6 @@ const rolePriorities = [
   { name: '🧡 | Trusted', prefix: 'T' },
   { name: '🌸 | Angel Aura', prefix: 'Angel' },
   { name: '📺 | Subscriber', prefix: 'SUB' },
-
-
 ];
 
 // Function to get the highest priority role
@@ -59,48 +55,6 @@ async function resetNickname(member) {
 
 client.once('ready', () => {
   console.log(`🤖 Bot is online as ${client.user.tag}`);
-});
-
-// Welcome Event
-client.on('guildMemberAdd', async (member) => {
-  console.log(`👤 New member joined: ${member.user.username}`);
-  console.log(`🔍 Trying to send welcome message to: ${process.env.WELCOME_CHANNEL_ID}`);
-  try {
-    // Welcome card feature
-    await welcomeEvent(member);
-    console.log(`👤 New member joined: ${member.user.username}`);
-    console.log(`🔍 Trying to send welcome message to: ${process.env.WELCOME_CHANNEL_ID}`);
-    // Nickname management
-    const memberRoles = member.roles.cache;
-    const highestRole = getHighestRole(memberRoles);
-
-    if (!highestRole) {
-      await resetNickname(member);
-      return;
-    }
-
-    const newNickname = `${highestRole.prefix} | ${member.user.username}`;
-
-    if (member.nickname !== newNickname) {
-      await member.setNickname(newNickname);
-      console.log(`👋 Set new nickname for ${member.user.username}: "${newNickname}"`);
-    }
-  } catch (error) {
-    console.error(`❌ Error in guildMemberAdd:`, error);
-  }
-});
-
-// Goodbye Event
-client.on('guildMemberRemove', async (member) => {
-  console.log(`👤 Member left: ${member.user.username}`);
-  console.log(`🔍 Trying to send goodbye message to: ${process.env.GOODBYE_CHANNEL_ID}`);
-  try {
-    console.log(`👤 Member left: ${member.user.username}`);
-    console.log(`🔍 Trying to send goodbye message to: ${process.env.GOODBYE_CHANNEL_ID}`);
-    await goodbyeEvent(member);
-  } catch (error) {
-    console.error('Error in goodbye event:', error);
-  }
 });
 
 // Timer Commands
@@ -188,18 +142,51 @@ client.on('messageCreate', async message => {
       await message.react('❗');
     }
   }
+
+  // Force Nickname Update Command
+  if (message.content.startsWith('!forcenick')) {
+    if (!message.member.permissions.has('MANAGE_NICKNAMES')) {
+      return message.reply("❌ You don't have permission to use this command!");
+    }
+
+    const member = message.mentions.members.first();
+    if (!member) return message.reply("⚠️ Please mention a member!");
+
+    const displayName = member.displayName || member.user.globalName || member.user.username;
+    const highestRole = getHighestRole(member.roles.cache);
+    
+    if (!highestRole) {
+      await resetNickname(member);
+      return message.reply(`✅ Reset ${member.user.username}'s nickname!`);
+    }
+
+    const newNickname = `${highestRole.prefix} | ${displayName}`;
+    await member.setNickname(newNickname);
+    message.reply(`✅ Force-updated nickname to: ${newNickname}`);
+  }
 });
 
-// Nickname Management
+// Improved Nickname Management
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
   try {
-    const memberRoles = newMember.roles.cache;
+    // Skip if the member is the bot itself
+    if (newMember.user.bot) return;
 
-    // Skip server owner
-    if (newMember.id === newMember.guild.ownerId) {
-      console.log(`⏩ Skipping owner: ${newMember.user.username}`);
+    const memberRoles = newMember.roles.cache;
+    const displayName = newMember.displayName || newMember.user.globalName || newMember.user.username;
+
+    // Check if the nickname was changed manually
+    const wasManuallyChanged = oldMember.nickname !== newMember.nickname && 
+                              newMember.nickname !== `${getHighestRole(oldMember.roles.cache)?.prefix || ''} | ${displayName}`;
+
+    // If nickname was manually changed by an admin/owner, respect that change
+    if (wasManuallyChanged) {
+      console.log(`🛑 Respecting manual nickname change for ${newMember.user.username}: "${newMember.nickname}"`);
       return;
     }
+
+    // Handle server owner specially - don't modify their nickname
+    if (newMember.id === newMember.guild.ownerId) return;
 
     const highestRole = getHighestRole(memberRoles);
     
@@ -208,7 +195,7 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
       return;
     }
 
-    const newNickname = `${highestRole.prefix} | ${newMember.user.username}`;
+    const newNickname = `${highestRole.prefix} | ${displayName}`;
 
     if (newMember.nickname !== newNickname) {
       await newMember.setNickname(newNickname);
@@ -225,5 +212,3 @@ client.login(process.env.DISCORD_TOKEN);
 const app = express();
 app.get('/', (req, res) => res.send('🤖 Bot is running.'));
 app.listen(3000, () => console.log('🌐 Express server running on port 3000'));
-console.log("WELCOME_CHANNEL_ID:", process.env.WELCOME_CHANNEL_ID);
-console.log("GOODBYE_CHANNEL_ID:", process.env.GOODBYE_CHANNEL_ID);
