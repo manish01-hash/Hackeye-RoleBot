@@ -36,9 +36,19 @@ const rolePriorities = [
 
 // Function to get the highest priority role
 function getHighestRole(memberRoles) {
-  return rolePriorities.find(role =>
-    memberRoles.some(r => r.name === role.name)
-  );
+  for (const role of rolePriorities) {
+    if (memberRoles.some(r => r.name === role.name)) {
+      return role;
+    }
+  }
+  return null;
+}
+
+function cleanDisplayName(nickname) {
+  if (!nickname) return '';
+  const prefixes = rolePriorities.map(r => r.prefix);
+  const regex = new RegExp(`^(${prefixes.join('|')})\\s\\|\\s`, 'g');
+  return nickname.replace(regex, '').trim();
 }
 
 // Function to reset nickname when no priority role is found
@@ -146,23 +156,51 @@ client.on('messageCreate', async message => {
   // Force Nickname Update Command
   if (message.content.startsWith('!forcenick')) {
     if (!message.member.permissions.has('MANAGE_NICKNAMES')) {
-      return message.reply("❌ You don't have permission to use this command!");
+      return message.reply("❌ You need **Manage Nicknames** permission!");
     }
 
+    const args = message.content.split(/ +/);
     const member = message.mentions.members.first();
-    if (!member) return message.reply("⚠️ Please mention a member!");
-
-    const displayName = member.displayName || member.user.globalName || member.user.username;
-    const highestRole = getHighestRole(member.roles.cache);
     
-    if (!highestRole) {
-      await resetNickname(member);
-      return message.reply(`✅ Reset ${member.user.username}'s nickname!`);
+    if (!member) {
+      return message.reply("⚠️ Please mention a member! (Example: `!forcenick @User NewNickname`)");
     }
 
-    const newNickname = `${highestRole.prefix} | ${displayName}`;
-    await member.setNickname(newNickname);
-    message.reply(`✅ Force-updated nickname to: ${newNickname}`);
+    // Extract new name (remove command and mention)
+    const newName = args.slice(2).join(' ').trim();
+    
+    try {
+      const currentNick = member.nickname || member.user.username;
+      const hasPrefix = currentNick.includes(' | ');
+
+      // If new name specified, update name portion only
+      if (newName) {
+        if (hasPrefix) {
+          const [currentPrefix] = currentNick.split(' | ');
+          await member.setNickname(`${currentPrefix} | ${newName}`.slice(0, 32));
+          return message.reply(`✅ Updated ${member}'s nickname to: \`${currentPrefix} | ${newName}\``);
+        }
+        await member.setNickname(newName.slice(0, 32));
+        return message.reply(`✅ Updated ${member}'s nickname to: \`${newName}\``);
+      }
+
+      // If no new name specified, apply role-based nickname
+      const highestRole = getHighestRole(member.roles.cache);
+      const displayName = cleanDisplayName(member.displayName || member.user.globalName || member.user.username);
+      
+      if (!highestRole) {
+        await resetNickname(member);
+        return message.reply(`✅ Reset ${member}'s nickname!`);
+      }
+
+      const newNickname = `${highestRole.prefix} | ${displayName}`.slice(0, 32);
+      await member.setNickname(newNickname);
+      message.reply(`✅ Updated ${member}'s nickname to: \`${newNickname}\``);
+      
+    } catch (error) {
+      console.error('ForceNick error:', error);
+      message.reply(`❌ Failed to update nickname: ${error.message}`);
+    }
   }
 });
 
@@ -173,11 +211,11 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
     if (newMember.user.bot) return;
 
     const memberRoles = newMember.roles.cache;
-    const displayName = newMember.displayName || newMember.user.globalName || newMember.user.username;
+    let displayName = newMember.displayName || newMember.user.globalName || newMember.user.username;
 
     // Check if the nickname was changed manually
     const wasManuallyChanged = oldMember.nickname !== newMember.nickname && 
-                              newMember.nickname !== `${getHighestRole(oldMember.roles.cache)?.prefix || ''} | ${displayName}`;
+                              newMember.nickname !== `${getHighestRole(oldMember.roles.cache)?.prefix || ''} | ${cleanDisplayName(displayName)}`;
 
     // If nickname was manually changed by an admin/owner, respect that change
     if (wasManuallyChanged) {
@@ -195,6 +233,8 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
       return;
     }
 
+    // Clean the display name from any existing role prefixes
+    displayName = cleanDisplayName(displayName);
     const newNickname = `${highestRole.prefix} | ${displayName}`;
 
     if (newMember.nickname !== newNickname) {
@@ -205,7 +245,6 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
     console.error(`❌ Error in guildMemberUpdate:`, error);
   }
 });
-
 client.login(process.env.DISCORD_TOKEN);
 
 // Express server to keep bot online
