@@ -46,9 +46,61 @@ function getHighestRole(memberRoles) {
 
 function cleanDisplayName(nickname) {
   if (!nickname) return '';
-  const prefixes = rolePriorities.map(r => r.prefix);
-  const regex = new RegExp(`^(${prefixes.join('|')})\\s\\|\\s`, 'g');
+
+  // Create a single regex pattern that matches all prefixes at once
+  const prefixes = rolePriorities.map(r => r.prefix).join('|');
+  const regex = new RegExp(`^(?:${prefixes})(?:\\s\\|\\s(?:${prefixes}))*\\s\\|\\s`, 'i');
+  // This will remove ALL prefix occurrences at the start
+   // Remove all prefix combinations at the start
   return nickname.replace(regex, '').trim();
+
+}
+
+// Updated forceNick command section
+if (message.content.startsWith('!forcenick')) {
+  if (!message.member.permissions.has('MANAGE_NICKNAMES')) {
+    return message.reply("❌ You need **Manage Nicknames** permission!");
+  }
+
+  const args = message.content.split(/ +/);
+  const member = message.mentions.members.first();
+  
+  if (!member) {
+    return message.reply("⚠️ Please mention a member! (Example: `!forcenick @User NewNickname`)");
+  }
+
+  const newName = args.slice(2).join(' ').trim();
+  const currentNick = member.nickname || member.user.username;
+  const displayName = cleanDisplayName(currentNick);
+  
+  try {
+    // If new name specified, update name portion only
+    if (newName) {
+      const highestRole = getHighestRole(member.roles.cache);
+      if (highestRole) {
+        const newNickname = `${highestRole.prefix} | ${newName}`.slice(0, 32);
+        await member.setNickname(newNickname);
+        return message.reply(`✅ Updated ${member}'s nickname to: \`${newNickname}\``);
+      }
+      await member.setNickname(newName.slice(0, 32));
+      return message.reply(`✅ Updated ${member}'s nickname to: \`${newName}\``);
+    }
+
+    // If no new name, apply proper role prefix
+    const highestRole = getHighestRole(member.roles.cache);
+    if (!highestRole) {
+      await resetNickname(member);
+      return message.reply(`✅ Reset ${member}'s nickname!`);
+    }
+
+    const newNickname = `${highestRole.prefix} | ${displayName}`.slice(0, 32);
+    await member.setNickname(newNickname);
+    return message.reply(`✅ Updated ${member}'s nickname to: \`${newNickname}\``);
+    
+  } catch (error) {
+    console.error('ForceNick error:', error);
+    message.reply(`❌ Failed to update nickname: ${error.message}`);
+  }
 }
 
 // Function to reset nickname when no priority role is found
