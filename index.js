@@ -205,55 +205,6 @@ client.on('messageCreate', async message => {
     }
   }
 
-  // Force Nickname Update Command
-  if (message.content.startsWith('!forcenick')) {
-    if (!message.member.permissions.has('MANAGE_NICKNAMES')) {
-      return message.reply("❌ You need **Manage Nicknames** permission!");
-    }
-
-    const args = message.content.split(/ +/);
-    const member = message.mentions.members.first();
-    
-    if (!member) {
-      return message.reply("⚠️ Please mention a member! (Example: `!forcenick @User NewNickname`)");
-    }
-
-    // Extract new name (remove command and mention)
-    const newName = args.slice(2).join(' ').trim();
-    
-    try {
-      const currentNick = member.nickname || member.user.username;
-      const hasPrefix = currentNick.includes(' | ');
-
-      // If new name specified, update name portion only
-      if (newName) {
-        if (hasPrefix) {
-          const [currentPrefix] = currentNick.split(' | ');
-          await member.setNickname(`${currentPrefix} | ${newName}`.slice(0, 32));
-          return message.reply(`✅ Updated ${member}'s nickname to: \`${currentPrefix} | ${newName}\``);
-        }
-        await member.setNickname(newName.slice(0, 32));
-        return message.reply(`✅ Updated ${member}'s nickname to: \`${newName}\``);
-      }
-
-      // If no new name specified, apply role-based nickname
-      const highestRole = getHighestRole(member.roles.cache);
-      const displayName = cleanDisplayName(member.displayName || member.user.globalName || member.user.username);
-      
-      if (!highestRole) {
-        await resetNickname(member);
-        return message.reply(`✅ Reset ${member}'s nickname!`);
-      }
-
-      const newNickname = `${highestRole.prefix} | ${displayName}`.slice(0, 32);
-      await member.setNickname(newNickname);
-      message.reply(`✅ Updated ${member}'s nickname to: \`${newNickname}\``);
-      
-    } catch (error) {
-      console.error('ForceNick error:', error);
-      message.reply(`❌ Failed to update nickname: ${error.message}`);
-    }
-  }
 });
 
 // Improved Nickname Management
